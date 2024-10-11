@@ -14,7 +14,7 @@ const char *vertexShaderSource = "#version 410 core\n"
                                  "void main() {\n"
                                  "    gl_Position = vec4(pos, 0.0, 1.0);\n"
                                  "}\n";
-const char *shaderFilePath = "shader.glsl";
+const char *defaultShaderFilePath = "shader.glsl";
 
 // Function to check if a file has changed based on its modification time
 time_t getFileModificationTime(const char *filePath)
@@ -97,9 +97,9 @@ GLuint linkProgram(GLuint vertexShader, GLuint fragmentShader)
 }
 
 // Function to reload the shader
-void reloadShader()
+void reloadShader(const char *shaderPath)
 {
-    char *fragmentShaderSource = readFile(shaderFilePath);
+    char *fragmentShaderSource = readFile(shaderPath);
     if (!fragmentShaderSource)
         return;
 
@@ -125,8 +125,10 @@ void reloadShader()
     printf("Shader reloaded successfully.\n");
 }
 
-int main(int argc, char *argv[])
+int main(int argc, char **argv)
 {
+    const char *shaderPath = argc == 2 ? argv[1] : defaultShaderFilePath;
+
     if (SDL_Init(SDL_INIT_VIDEO) != 0)
     {
         printf("Failed to initialize SDL: %s\n", SDL_GetError());
@@ -137,7 +139,7 @@ int main(int argc, char *argv[])
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 1);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
 
-    SDL_Window *window = SDL_CreateWindow("OpenGL Shader Reload", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 800, 600, SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
+    SDL_Window *window = SDL_CreateWindow("Shader preview", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 800, 600, SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
     if (!window)
     {
         printf("Failed to create window: %s\n", SDL_GetError());
@@ -166,8 +168,8 @@ int main(int argc, char *argv[])
     }
 
     // Initial shader loading
-    reloadShader();
-    time_t lastModificationTime = getFileModificationTime(shaderFilePath);
+    reloadShader(shaderPath);
+    time_t lastModificationTime = getFileModificationTime(shaderPath);
 
     // Fullscreen quad setup
     float vertices[] = {
@@ -219,21 +221,23 @@ int main(int argc, char *argv[])
         }
 
         // Check for shader file changes
-        time_t currentModificationTime = getFileModificationTime(shaderFilePath);
+        time_t currentModificationTime = getFileModificationTime(shaderPath);
         if (currentModificationTime > lastModificationTime)
         {
-            reloadShader();
+            reloadShader(shaderPath);
             lastModificationTime = currentModificationTime;
         }
 
         time = (SDL_GetTicks() - timeReset) / 1000.0f; // Time in seconds
         if (updateMouse == SDL_TRUE)
+        {
             SDL_GetMouseState(&mouseX, &mouseY);
+            glUniform1i(mouseXLocation, mouseX);
+            glUniform1i(mouseYLocation, mouseY);
+        }
 
         glUseProgram(shaderProgram);
         glUniform1f(timeLocation, time);
-        glUniform1i(mouseXLocation, mouseX);
-        glUniform1i(mouseYLocation, mouseY);
         glUniform1i(resolutionXLocation, 800);
         glUniform1i(resolutionYLocation, 600);
 

@@ -1,5 +1,4 @@
-# Shaders
+# Shader preview
 
-Shader experiments.
+Shader experiments and program to preview and live reload.
 
-First example follows this tutorial from Inigo Quilez: https://www.youtube.com/watch?v=Cfe5UQ-1L9Q&t=9776s
