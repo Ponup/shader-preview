@@ -256,7 +256,7 @@ float castShadow( in vec3 ro, vec3 rd, float time) {
     float t = 0.01;
     for(int i = 0; i < 128 && t<tmax; i++) {
         float h = map(ro+rd*t, time).x;
-        res = min(res, 24*max(h,0)/t);
+        res = min(res, 32*max(h,0)/t);
         if(res<0.001) break;
         t += clamp(h, 0.001, 0.1);
     }
@@ -319,11 +319,7 @@ vec3 render(in vec3 ro, in vec3 rd, float time) {
 
         vec3 lin  = vec3(0.);
         //sun light
-        lin += sun_dif *vec3(9, 6, 3)*
-        	vec3(sun_sha,
-                    //sun_sha*0.5+0.5*sun_sha*sun_sha,
-        			sun_sha*sun_sha,
-        			sun_sha*sun_sha);
+        lin += sun_dif *vec3(9, 6, 3)*sun_sha;
         // sky light
         lin += sky_dif *vec3(0.5,0.7,1)*2.2*occ;
         // bounce
@@ -336,7 +332,6 @@ vec3 render(in vec3 ro, in vec3 rd, float time) {
 
         col = mix(col,vec3(0.5,0.7,0.9), 1-exp(-0.0001*t*t*t));
 //        col = vec3(tm.z*tm.z);
-		//col = vec3(sun_sha*sun_sha);
     }
 
     return col;
@@ -372,9 +367,6 @@ void main() {
     vec3 col = render(ro, rd, myTime);
 
     col = pow(col, vec3(0.4545)); // gamma correction
-    							  //
-	col = clamp(1*col, 0, 1);
-    col = col*col*(3-2*col);
 
     FragColor = vec4(col, 1);
 }

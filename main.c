@@ -197,7 +197,8 @@ int main(int argc, char **argv)
     float time = 0.0f;
     int mouseX, mouseY;
     Uint32 timeReset = 0;
-    SDL_bool updateMouse = SDL_FALSE;
+    SDL_bool updateMouse = SDL_FALSE,
+    		 updateTime = SDL_TRUE;
 
     while (running)
     {
@@ -209,6 +210,11 @@ int main(int argc, char **argv)
                 running = 0;
             }
             if (event.type == SDL_KEYDOWN)
+            {
+                if (event.key.keysym.sym == SDLK_UP)
+                	updateTime = !updateTime;
+            }
+            if (event.type == SDL_KEYUP)
             {
                 if (event.key.keysym.sym == SDLK_UP)
                     timeReset = SDL_GetTicks();
@@ -228,18 +234,21 @@ int main(int argc, char **argv)
             lastModificationTime = currentModificationTime;
         }
 
-        time = (SDL_GetTicks() - timeReset) / 1000.0f; // Time in seconds
+		if(updateTime == SDL_TRUE) {
+        	time = (SDL_GetTicks() - timeReset) / 1000.0f; // Time in seconds
+        }
+
         if (updateMouse == SDL_TRUE)
         {
             SDL_GetMouseState(&mouseX, &mouseY);
-            glUniform1i(mouseXLocation, mouseX);
-            glUniform1i(mouseYLocation, mouseY);
         }
 
         glUseProgram(shaderProgram);
         glUniform1f(timeLocation, time);
         glUniform1i(resolutionXLocation, 800);
         glUniform1i(resolutionYLocation, 600);
+        glUniform1i(mouseXLocation, mouseX);
+        glUniform1i(mouseYLocation, mouseY);
 
         // Render with the shader
         glClear(GL_COLOR_BUFFER_BIT);

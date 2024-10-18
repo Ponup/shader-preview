@@ -92,10 +92,6 @@ vec4 map( in vec3 pos, float atime )
 
 	// head
     vec3 h = r;
-    float ha = 1.0*(-1+2*smoothstep(-0.2, 0.2, sin(atime)));
-    cc = cos(ha);
-    ss = sin(ha);
-    h.xz = (mat2(cc, ss, -ss, cc)*h.xz);
     vec3 hq = vec3( abs(h.x), h.yz );
    	float d  = sdEllipsoid( h-vec3(0.0,0.20,0.02), vec3(0.08,0.2,0.15) );
 	float d2 = sdEllipsoid( h-vec3(0.0,0.21,-0.1), vec3(0.20,0.2,0.20) );
@@ -110,9 +106,7 @@ vec4 map( in vec3 pos, float atime )
 
     // arms
     {
-        vec2 arms = sdStick(sq,
-        		vec3(0.18-abs(ha)*0.05, 0.2, -0.05),
-        		vec3(0.3+0.1*p2, -0.2+0.3*p2, -0.15), 0.03, 0.06);
+        vec2 arms = sdStick(sq, vec3(0.18, 0.2, -0.05), vec3(0.3+0.1*p2, -0.2+0.3*p2, -0.15), 0.03, 0.06);
         res.x = smin(res.x, arms.x, 0.01
         +0.04*(1.0-arms.y)*(1-arms.y)*(1-arms.y));
     }
@@ -256,7 +250,7 @@ float castShadow( in vec3 ro, vec3 rd, float time) {
     float t = 0.01;
     for(int i = 0; i < 128 && t<tmax; i++) {
         float h = map(ro+rd*t, time).x;
-        res = min(res, 24*max(h,0)/t);
+        res = min(res, 32*max(h,0)/t);
         if(res<0.001) break;
         t += clamp(h, 0.001, 0.1);
     }
@@ -319,11 +313,7 @@ vec3 render(in vec3 ro, in vec3 rd, float time) {
 
         vec3 lin  = vec3(0.);
         //sun light
-        lin += sun_dif *vec3(9, 6, 3)*
-        	vec3(sun_sha,
-                    //sun_sha*0.5+0.5*sun_sha*sun_sha,
-        			sun_sha*sun_sha,
-        			sun_sha*sun_sha);
+        lin += sun_dif *vec3(9, 6, 3)*sun_sha;
         // sky light
         lin += sky_dif *vec3(0.5,0.7,1)*2.2*occ;
         // bounce
@@ -336,7 +326,6 @@ vec3 render(in vec3 ro, in vec3 rd, float time) {
 
         col = mix(col,vec3(0.5,0.7,0.9), 1-exp(-0.0001*t*t*t));
 //        col = vec3(tm.z*tm.z);
-		//col = vec3(sun_sha*sun_sha);
     }
 
     return col;
@@ -372,9 +361,6 @@ void main() {
     vec3 col = render(ro, rd, myTime);
 
     col = pow(col, vec3(0.4545)); // gamma correction
-    							  //
-	col = clamp(1*col, 0, 1);
-    col = col*col*(3-2*col);
 
     FragColor = vec4(col, 1);
 }

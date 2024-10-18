@@ -35,8 +35,7 @@ vec2 sdStick(in vec3 p, vec3 a, vec3 b, float ra, float rb) {
     return vec2(length(pa - ba*h) - mix(ra, rb, h*h*(3-2*h)), h);
 }
 
-// Union operator
-vec4 opU(vec4 d1, vec4 d2) {
+vec2 opU(vec2 d1, vec2 d2) {
     return (d1.x<d2.x) ? d1 : d2;
 }
 
@@ -47,7 +46,7 @@ float sdEllipsoid(in vec3 pos, vec3 rad) {
 }
 
 
-vec4 map( in vec3 pos, float atime )
+vec2 map( in vec3 pos, float atime )
 {
     float t1 = fract(atime);
 
@@ -82,7 +81,7 @@ vec4 map( in vec3 pos, float atime )
 	
     q.yz = vec2( dot(uu,q.yz), dot(vv,q.yz) );
     
-    vec4 res = vec4( sdEllipsoid( q, vec3(0.25, 0.25*sy, 0.25*sz) ), 2.0 , 1, 0);
+    vec2 res = vec2( sdEllipsoid( q, vec3(0.25, 0.25*sy, 0.25*sz) ), 2.0 );
 
     float t2 = fract(atime+0.8);
     float p2 = 0.5-0.5*cos(6.2831*t2);
@@ -92,10 +91,6 @@ vec4 map( in vec3 pos, float atime )
 
 	// head
     vec3 h = r;
-    float ha = 1.0*(-1+2*smoothstep(-0.2, 0.2, sin(atime)));
-    cc = cos(ha);
-    ss = sin(ha);
-    h.xz = (mat2(cc, ss, -ss, cc)*h.xz);
     vec3 hq = vec3( abs(h.x), h.yz );
    	float d  = sdEllipsoid( h-vec3(0.0,0.20,0.02), vec3(0.08,0.2,0.15) );
 	float d2 = sdEllipsoid( h-vec3(0.0,0.21,-0.1), vec3(0.20,0.2,0.20) );
@@ -110,9 +105,7 @@ vec4 map( in vec3 pos, float atime )
 
     // arms
     {
-        vec2 arms = sdStick(sq,
-        		vec3(0.18-abs(ha)*0.05, 0.2, -0.05),
-        		vec3(0.3+0.1*p2, -0.2+0.3*p2, -0.15), 0.03, 0.06);
+        vec2 arms = sdStick(sq, vec3(0.18, 0.2, -0.05), vec3(0.3+0.1*p2, -0.2+0.3*p2, -0.15), 0.03, 0.06);
         res.x = smin(res.x, arms.x, 0.01
         +0.04*(1.0-arms.y)*(1-arms.y)*(1-arms.y));
     }
@@ -140,11 +133,10 @@ vec4 map( in vec3 pos, float atime )
     // mouth
     {
    	d = sdEllipsoid( h-vec3(0.0,0.15+4.0*hq.x*hq.x,0.15), vec3(0.1,0.04,0.2) );
-   	res.x = smax(res.x, -d, 0.03);
-    res.z *= 1 - smoothstep(-0.01, 0.001, -d);
+    res.x = smax( res.x, -d, 0.03 );
     }
         
-    // eyes
+    // eye
     {
     float blink = pow(0.5+0.5*sin(2.1*time),20.0);
     float eyeball = sdSphere(hq-vec3(0.08,0.27,0.06),0.065+0.02*blink);
@@ -155,10 +147,8 @@ vec4 map( in vec3 pos, float atime )
     d = sdEllipsoid( cq, vec3(0.06,0.03,0.03) );
     res.x = smin( res.x, d, 0.03 );
 
-	float oc=0.2+0.6*smoothstep(0, 0.017, eyeball); 
-
-    res = opU( res, vec4(sdSphere(hq-vec3(0.08,0.28,0.08),0.060),3.0, oc, 0));
-    res = opU( res, vec4(sdSphere(hq-vec3(0.075,0.28,0.102),0.0395), 4.0, 1, 0));
+    res = opU( res, vec2(sdSphere(hq-vec3(0.08,0.28,0.08),0.060),3.0));
+    res = opU( res, vec2(sdSphere(hq-vec3(0.075,0.28,0.102),0.0395),4.0));
     }
         
     // ground
@@ -188,7 +178,7 @@ vec4 map( in vec3 pos, float atime )
     d2 *= 0.6;
     d2 = min(d2,2.0);
     d = smin( d, d2, 0.32 );
-    if( d<res.x ) res = vec4(d,1.0, 1, 0);
+    if( d<res.x ) res = vec2(d,1.0);
     }
    
     // candies
@@ -200,10 +190,8 @@ vec4 map( in vec3 pos, float atime )
 				id.x*81.6 + id.y*51.4));
     float  rad = (0.05);
     float d = sdSphere( vp-vec3(dis.x*0.1,fh,dis.y*0.1), rad );
-    // candy occlusion
-    float co = clamp((pos.y - fh)/0.02, 0 , 1);
     
-    if( d<res.x ) res = vec4(d,5.0, co, 0);
+    if( d<res.x ) res = vec2(d,5.0);
     }
 
     // 
@@ -218,51 +206,38 @@ vec3 calcNormal(in vec3 pos, float time) {
                         map(pos + e.yyx, time).x - map(pos-e.yyx, time).x)
                         );
 }
+float castShadow(in vec3 ro, vec3 rd) {
+    float res = 1;
 
-float calcOcclusion( in vec3 pos, in vec3 nor, float time )
-{
-	float occ = 0.0;
-    float sca = 1.0;
-    for( int i=0; i<5; i++ )
-    {
-        float h = 0.01 + 0.11*float(i)/4.0;
-        vec3 opos = pos + h*nor;
-        float d = map( opos, time ).x;
-        occ += (h-d)*sca;
-        sca *= 0.95;
+    float t = 0.001;
+    for(int i =0; i <100; i++) {
+        vec3 pos = ro + t*rd;
+        float h = map(pos, time).x;
+        res= min(res, 16*h /t);
+        if(h<0.0001) break;
+        t+=h;
+        if(t>20) break;
+
     }
-    return clamp( 1.0 - 2.0*occ, 0.0, 1.0 );
+    return clamp(res, 0, 1);
 }
 
-vec4 castRay( in vec3 ro, vec3 rd, float time) {
-    vec4 res = vec4(-1,-1, 0, 1);
+vec2 castRay( in vec3 ro, vec3 rd, float time) {
+    vec2 res = vec2(-1,-1);
     float tmin = 0.5;
     float tmax = 20;
 
     float t = tmin;
-    for(int i = 0; i < 256 && t<tmax; i++) {
-        vec4 h = map(ro+rd*t, time);
-        if(abs(h.x) < (0.0005*t)) {
-            res = vec4(t,h.yzw);
+    for(int i = 0; i < 512 && t<tmax; i++) {
+        vec2 h = map(ro+rd*t, time);
+        if(abs(h.x) < (0.001*t)) {
+            res = vec2(t,h.y);
             break;
         }
         t += h.x;
     }
     return res;
 }
-float castShadow( in vec3 ro, vec3 rd, float time) {
-    float res = 1;
-    const float tmax = 15;
-    float t = 0.01;
-    for(int i = 0; i < 128 && t<tmax; i++) {
-        float h = map(ro+rd*t, time).x;
-        res = min(res, 24*max(h,0)/t);
-        if(res<0.001) break;
-        t += clamp(h, 0.001, 0.1);
-    }
-    return res;
-}
-
 
 vec3 render(in vec3 ro, in vec3 rd, float time) {
     // sky dome
@@ -275,7 +250,7 @@ vec3 render(in vec3 ro, in vec3 rd, float time) {
     col = mix(col, vec3(0.7, 0.8, .9), smoothstep(-0.1,0.1,-0.5+cl));
     col = mix(col, vec3(0.7, 0.8, .9), exp(-10*rd.y));
     
-    vec4 tm = castRay(ro, rd, time);
+    vec2 tm = castRay(ro, rd, time);
 
     if(tm.y > -0.5) {
         float t = tm.x;
@@ -288,14 +263,13 @@ vec3 render(in vec3 ro, in vec3 rd, float time) {
 
         if(tm.y ==1) { // terrain
             col = vec3(0.05, 0.09, 0.02);
-            float f = 0.2*(-1+2*smoothstep(-0.2,0.2,sin(18*pos.x)+sin(18*pos.y)+sin(18*pos.z)));
-            col += f*vec3(0.06,0.06,0.02);
-            ks = 0.5 + pos.y*0.15;
+            float f = -1+2*smoothstep(-0.2,0.2,sin(18*pos.x)+sin(18*pos.y)+sin(18*pos.z));
+            col += 0.2*f*vec3(0.06,0.06,0.02);
         } else 
         if(tm.y ==2) { //body
             col = vec3(0.2, 0.1, 0.02);
         } else if (tm.y == 3) { //iris
-            col = vec3(0.3);
+            col = vec3(0.4, 0.4, 0.4);
         } else if (tm.y == 4) { //eyeball
             col = vec3(0.00);
         } else if (tm.y == 5) { //candies
@@ -305,38 +279,21 @@ vec3 render(in vec3 ro, in vec3 rd, float time) {
             col+= 0.03*cos(fid*10+vec3(0,0.2,0.5));
         }
 
-		// lighting
-		float occ = calcOcclusion(pos, nor, time)*tm.z;
         vec3 sun_lig = normalize(vec3(0.6, 0.35, 0.5));
         float sun_dif = clamp(dot(nor, sun_lig), 0, 1); // diffuse
         vec3 sun_hal = normalize(sun_lig-rd);
-        float sun_sha = castShadow(pos+nor*0.001, sun_lig,time);
+        float sun_sha = step(castRay(pos+nor*0.001, sun_lig,time).y, 0);
         float sun_spe = ks * pow(clamp(dot(nor,sun_hal), 0,1),8)*sun_dif*(0.04+0.96*pow(clamp(1+dot(sun_hal,rd),0,1),5));
         float sky_dif = sqrt(clamp(0.5 + 0.5 * nor.y, 0, 1));
-        float sky_ref = smoothstep(0, 0.3, ref.y);
         float bou_dif = sqrt(clamp(0.1 - 0.9 * nor.y, 0, 1))*clamp(1-0.1*pos.y,0,1); // bounce light
-        																		float fre = clamp(1+dot(rd, nor), 0,1);
 
         vec3 lin  = vec3(0.);
-        //sun light
-        lin += sun_dif *vec3(9, 6, 3)*
-        	vec3(sun_sha,
-                    //sun_sha*0.5+0.5*sun_sha*sun_sha,
-        			sun_sha*sun_sha,
-        			sun_sha*sun_sha);
-        // sky light
-        lin += sky_dif *vec3(0.5,0.7,1)*2.2*occ;
-        // bounce
-        lin += bou_dif*vec3(0.4,1.3,0.4)*occ;
-        lin += fre*vec3(1.0,0.5,0.4)*8*(0.5+0.5*sun_dif*occ)*(0.1+0.9*sun_sha);
+        lin += sun_dif *vec3(8.1, 6, 4.2)*sun_sha;
+        lin += sky_dif *vec3(0.5,0.7,1);
+        lin += bou_dif*vec3(0.4,1,0.4);
         col = col*lin;
-
         col += sun_spe*vec3(8.1,6,4.2)*sun_sha;
-        col += sky_ref*0.07*vec3(0.7,0.9,1)*sky_dif*occ;
-
         col = mix(col,vec3(0.5,0.7,0.9), 1-exp(-0.0001*t*t*t));
-//        col = vec3(tm.z*tm.z);
-		//col = vec3(sun_sha*sun_sha);
     }
 
     return col;
@@ -372,9 +329,6 @@ void main() {
     vec3 col = render(ro, rd, myTime);
 
     col = pow(col, vec3(0.4545)); // gamma correction
-    							  //
-	col = clamp(1*col, 0, 1);
-    col = col*col*(3-2*col);
 
     FragColor = vec4(col, 1);
 }
