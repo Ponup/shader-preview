@@ -31,7 +31,6 @@ vec2 sdStick(in vec3 p, vec3 a, vec3 b, float ra, float rb) {
     vec3 ba = b-a;
     vec3 pa = p-a;
     float h = clamp(dot(pa, ba)/dot(ba,ba), 0, 1);
-    float r = mix(ra, rb, h);
     return vec2(length(pa - ba*h) - mix(ra, rb, h*h*(3-2*h)), h);
 }
 
@@ -84,6 +83,10 @@ vec4 map( in vec3 pos, float atime )
     
     vec4 res = vec4( sdEllipsoid( q, vec3(0.25, 0.25*sy, 0.25*sz) ), 2.0 , 1, 0);
 
+    float d;
+
+	// bounding box (inflation factor 1)
+    if(res.x < 1) {
     float t2 = fract(atime+0.8);
     float p2 = 0.5-0.5*cos(6.2831*t2);
     r.z += 0.05-0.2*p2;
@@ -97,7 +100,7 @@ vec4 map( in vec3 pos, float atime )
     ss = sin(ha);
     h.xz = (mat2(cc, ss, -ss, cc)*h.xz);
     vec3 hq = vec3( abs(h.x), h.yz );
-   	float d  = sdEllipsoid( h-vec3(0.0,0.20,0.02), vec3(0.08,0.2,0.15) );
+   	d  = sdEllipsoid( h-vec3(0.0,0.20,0.02), vec3(0.08,0.2,0.15) );
 	float d2 = sdEllipsoid( h-vec3(0.0,0.21,-0.1), vec3(0.20,0.2,0.20) );
 	d = smin( d, d2, 0.1 );
     res.x = smin( res.x, d, 0.1 );
@@ -159,6 +162,7 @@ vec4 map( in vec3 pos, float atime )
 
     res = opU( res, vec4(sdSphere(hq-vec3(0.08,0.28,0.08),0.060),3.0, oc, 0));
     res = opU( res, vec4(sdSphere(hq-vec3(0.075,0.28,0.102),0.0395), 4.0, 1, 0));
+    }
     }
         
     // ground
@@ -239,6 +243,9 @@ vec4 castRay( in vec3 ro, vec3 rd, float time) {
     float tmin = 0.5;
     float tmax = 20;
 
+	float bt = (3.4-ro.y)/rd.y;
+	if(bt > 0) tmax = min(tmax, bt);
+
     float t = tmin;
     for(int i = 0; i < 256 && t<tmax; i++) {
         vec4 h = map(ro+rd*t, time);
@@ -250,17 +257,22 @@ vec4 castRay( in vec3 ro, vec3 rd, float time) {
     }
     return res;
 }
+
 float castShadow( in vec3 ro, vec3 rd, float time) {
     float res = 1;
-    const float tmax = 15;
-    float t = 0.01;
-    for(int i = 0; i < 128 && t<tmax; i++) {
+    float tmax = 12;
+
+	float bt = (3.4-ro.y)/rd.y;
+	if(bt > 0) tmax = min(tmax, bt);
+
+    float t = 0.02;
+    for(int i = 0; i < 50; i++) {
         float h = map(ro+rd*t, time).x;
-        res = min(res, 24*max(h,0)/t);
-        if(res<0.001) break;
-        t += clamp(h, 0.001, 0.1);
+        res = min(res, 16*h/t);
+        t += clamp(h, 0.05, 0.4);
+        if(res<0.005 || t>tmax) break;
     }
-    return res;
+    return clamp(res,0,1);
 }
 
 
@@ -350,32 +362,64 @@ mat3 setCamera(in vec3 ro, in vec3 ta, float cr) {
     return mat3(cu, cv, cw);
 }
 
+#define AA 2
+
 void main() {
-    vec2 p = (2 * gl_FragCoord.xy - vec2(800,600)) / 600; // perspective
+	vec3 tot = vec3(0.0);
 
-    float myTime = time * 0.9;
+	for(int m=0; m < AA; m++)
+	for(int n=0; n < AA; n++) {
+		vec2 off = vec2(float(m)/ float(n))/float(AA)-0.5;
+    	vec2 p = (- vec2(800,600) + 2 * (gl_FragCoord.xy+off) ) / 600; // perspective
+    	float d = 0.5 + 0.5*sin(gl_FragCoord.x*147)*sin(gl_FragCoord.y*131);
+    	float time2 = time - 0.5*(1/24)*(float(m*AA*n)+d)/float(AA*AA);
 
-    // camera
-    float cl  = sin(0.5*time); //camera distance
-    float an = 1.57+0.7*sin(0.15*time);
-    vec3 ta = vec3(0, .65, -0.6+time*1-0.4*cl); //camera target
-    vec3 ro = ta + vec3(1.3*cos(an), -0.250, 3.3*sin(an)); // camera origin
-    													   //
-    float bt =-1.0+2* abs(fract(time*0.5)-0.5)/0.5;
-	float bou = smoothstep(0.8, 1, abs(bt));
-    ro += 0.05*sin(time*15+vec3(0,2,4))*bou;
 
-    mat3 ca = setCamera(ro, ta, 0);
+    	float myTime = time2+2.6;
+    	myTime *= 0.9;
 
-    vec3 rd = ca * normalize(vec3(p,1.8)); // camera direction
+    	// camera
+    	float cl  = sin(0.5*myTime); //camera distance
+    	float an = 1.57+0.7*sin(0.15*myTime);
+    	vec3 ta = vec3(0, .65, -0.6+myTime*1-0.4*cl); //camera target
+    	vec3 ro = ta + vec3(1.3*cos(an), -0.250, 3.3*sin(an)); // camera origin
+    	float ti = fract(myTime-0.15);
+    	ti = 4*ti*(1-ti);
+    	ta.y += 0.15*ti*ti*(3-2*ti)*smoothstep(0.4,0.9,cl);
+    													   	   //
+    	float bt =-1.0+2* abs(fract(myTime*0.5)-0.5)/0.5;
+    float t4 = abs(fract(myTime*0.5)-0.5)/0.5;
+		float bou = 1+2*t4;
+    	ro += 0.06*sin(myTime*12+vec3(0,2,4))*smoothstep(0.85,1,abs(bou));
 
-    vec3 col = render(ro, rd, myTime);
+    	mat3 ca = setCamera(ro, ta, 0);
 
-    col = pow(col, vec3(0.4545)); // gamma correction
-    							  //
-	col = clamp(1*col, 0, 1);
-    col = col*col*(3-2*col);
+    	vec3 rd = ca * normalize(vec3(p,1.8)); // camera direction
 
-    FragColor = vec4(col, 1);
+    	vec3 col = render(ro, rd, myTime);
+    	// color grading
+    	col = col*vec3(1.11,0.89,0.79);
+
+		//compress
+    	col = 1.35 * col/(1+col);
+
+    	col = pow(col, vec3(0.4545)); // gamma correction
+    							  	  //
+		col = clamp(1*col, 0, 1);
+		col = col*col*(3-2*col);
+    	tot += col;
+    }
+
+	tot /= float(AA*AA);
+
+	// s-surve
+	tot = clamp(tot, 0, 1);
+	tot= tot*tot*(3-2*tot);
+
+	// vignetting
+	vec2 q = gl_FragCoord.xy/vec2(resolutionX, resolutionY);
+	tot *= 0.5 + 0.5 * pow(16*q.x*q.y*(1-q.x)*(1-q.y), 0.25);
+
+    FragColor = vec4(tot, 1);
 }
 
