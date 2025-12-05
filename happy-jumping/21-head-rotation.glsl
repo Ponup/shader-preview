@@ -66,7 +66,7 @@ vec4 map( in vec3 pos, float atime )
     vec2 vv = vec2(-uu.y, uu.x);
     
     float sy = 0.5 + 0.5*p;
-    float compress = 1.0-smoothstep(0.0,0.4,p);
+    float compress = 1.0-smoothstep(0.0, 0.4, p);
     sy = sy*(1.0-compress) + compress;
     float sz = 1.0/sy;
 
@@ -105,7 +105,7 @@ vec4 map( in vec3 pos, float atime )
     //wrinkles
     {
         float yy = r.y -0.02-2.5*r.x*r.x;
-        res.x += 0.001*sin(yy*120) *(1-smoothstep(0.0,0.1,yy));
+        res.x += 0.001*sin(yy*120) *(1-smoothstep(0.0, 0.1, yy));
     }
 
     // arms
@@ -155,7 +155,7 @@ vec4 map( in vec3 pos, float atime )
     d = sdEllipsoid( cq, vec3(0.06,0.03,0.03) );
     res.x = smin( res.x, d, 0.03 );
 
-	float oc=0.2+0.6*smoothstep(0, 0.017, eyeball); 
+	float oc=0.2+0.6*smoothstep(0.0, 0.017, eyeball); 
 
     res = opU( res, vec4(sdSphere(hq-vec3(0.08,0.28,0.08),0.060),3.0, oc, 0));
     res = opU( res, vec4(sdSphere(hq-vec3(0.075,0.28,0.102),0.0395), 4.0, 1, 0));
@@ -169,7 +169,7 @@ vec4 map( in vec3 pos, float atime )
 	fh -= 0.1*sin(gt*10+l*3)*
 		exp(-1*l*l)*
 		exp(-1*gt)
-		*smoothstep(0,0.1,gt);
+		*smoothstep(0.0, 0.1, gt);
 
     d = pos.y - fh;
 
@@ -272,7 +272,7 @@ vec3 render(in vec3 ro, in vec3 rd, float time) {
 
 	float cl = 1*sin(1*uv.x)+sin(1*uv.y)+
 			0.5*sin(2*uv.x)+sin(2*uv.y);
-    col = mix(col, vec3(0.7, 0.8, .9), smoothstep(-0.1,0.1,-0.5+cl));
+    col = mix(col, vec3(0.7, 0.8, .9), smoothstep(-0.1, 0.1, -0.5+cl));
     col = mix(col, vec3(0.7, 0.8, .9), exp(-10*rd.y));
     
     vec4 tm = castRay(ro, rd, time);
@@ -288,7 +288,7 @@ vec3 render(in vec3 ro, in vec3 rd, float time) {
 
         if(tm.y ==1) { // terrain
             col = vec3(0.05, 0.09, 0.02);
-            float f = 0.2*(-1+2*smoothstep(-0.2,0.2,sin(18*pos.x)+sin(18*pos.y)+sin(18*pos.z)));
+            float f = 0.2*(-1+2*smoothstep(-0.2, 0.2, sin(18*pos.x)+sin(18*pos.y)+sin(18*pos.z)));
             col += f*vec3(0.06,0.06,0.02);
             ks = 0.5 + pos.y*0.15;
         } else 
@@ -313,7 +313,7 @@ vec3 render(in vec3 ro, in vec3 rd, float time) {
         float sun_sha = castShadow(pos+nor*0.001, sun_lig,time);
         float sun_spe = ks * pow(clamp(dot(nor,sun_hal), 0,1),8)*sun_dif*(0.04+0.96*pow(clamp(1+dot(sun_hal,rd),0,1),5));
         float sky_dif = sqrt(clamp(0.5 + 0.5 * nor.y, 0, 1));
-        float sky_ref = smoothstep(0, 0.3, ref.y);
+        float sky_ref = smoothstep(0.0, 0.3, ref.y);
         float bou_dif = sqrt(clamp(0.1 - 0.9 * nor.y, 0, 1))*clamp(1-0.1*pos.y,0,1); // bounce light
         																		float fre = clamp(1+dot(rd, nor), 0,1);
 
@@ -357,7 +357,7 @@ void main() {
     vec3 ro = ta + vec3(1.3*cos(an), -0.250, 3.3*sin(an)); // camera origin
     													   //
     float bt =-1.0+2* abs(fract(time*0.5)-0.5)/0.5;
-	float bou = smoothstep(0.8, 1, abs(bt));
+	float bou = smoothstep(0.8, 1.0, abs(bt));
     ro += 0.05*sin(time*15+vec3(0,2,4))*bou;
 
     mat3 ca = setCamera(ro, ta, 0);

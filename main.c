@@ -1,4 +1,4 @@
-#include <SDL2/SDL.h>
+#include <SDL3/SDL.h>
 #include <GL/glew.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -129,7 +129,7 @@ int main(int argc, char **argv)
 {
     const char *shaderPath = argc == 2 ? argv[1] : defaultShaderFilePath;
 
-    if (SDL_Init(SDL_INIT_VIDEO) != 0)
+    if (!SDL_Init(SDL_INIT_VIDEO))
     {
         printf("Failed to initialize SDL: %s\n", SDL_GetError());
         return -1;
@@ -139,7 +139,7 @@ int main(int argc, char **argv)
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 1);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
 
-    SDL_Window *window = SDL_CreateWindow("Shader preview", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 800, 600, SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
+    SDL_Window *window = SDL_CreateWindow("Shader preview", 800, 600, SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
     if (!window)
     {
         printf("Failed to create window: %s\n", SDL_GetError());
@@ -161,7 +161,7 @@ int main(int argc, char **argv)
     if (glewStatus != GLEW_OK)
     {
         printf("Failed to initialize GLEW: %s\n", glewGetErrorString(glewStatus));
-        SDL_GL_DeleteContext(context);
+        SDL_GL_DestroyContext(context);
         SDL_DestroyWindow(window);
         SDL_Quit();
         return -1;
@@ -195,35 +195,35 @@ int main(int argc, char **argv)
     SDL_Event event;
     int running = 1;
     float time = 0.0f;
-    int mouseX, mouseY;
+    float mouseX, mouseY;
     Uint32 timeReset = 0;
-    SDL_bool updateMouse = SDL_FALSE,
-    		 updateTime = SDL_TRUE;
+    bool updateMouse = false,
+    		 updateTime = true;
 
     while (running)
     {
         // Handle events
         while (SDL_PollEvent(&event))
         {
-            if (event.type == SDL_QUIT)
+            if (event.type == SDL_EVENT_QUIT)
             {
                 running = 0;
             }
-            if (event.type == SDL_KEYDOWN)
+            if (event.type == SDL_EVENT_KEY_DOWN)
             {
-                if (event.key.keysym.sym == SDLK_UP)
+                if (event.key.key == SDLK_UP)
                 	updateTime = !updateTime;
             }
-            if (event.type == SDL_KEYUP)
+            if (event.type == SDL_EVENT_KEY_UP)
             {
-                if (event.key.keysym.sym == SDLK_UP)
+                if (event.key.key == SDLK_UP)
                     timeReset = SDL_GetTicks();
             }
 
-            if (event.type == SDL_MOUSEBUTTONDOWN)
-                updateMouse = SDL_TRUE;
-            if (event.type == SDL_MOUSEBUTTONUP)
-                updateMouse = SDL_FALSE;
+            if (event.type == SDL_EVENT_MOUSE_BUTTON_DOWN)
+                updateMouse = true;
+            if (event.type == SDL_EVENT_MOUSE_BUTTON_UP)
+                updateMouse = false;
         }
 
         // Check for shader file changes
@@ -234,11 +234,11 @@ int main(int argc, char **argv)
             lastModificationTime = currentModificationTime;
         }
 
-		if(updateTime == SDL_TRUE) {
+		if(updateTime == true) {
         	time = (SDL_GetTicks() - timeReset) / 1000.0f; // Time in seconds
         }
 
-        if (updateMouse == SDL_TRUE)
+        if (updateMouse == true)
         {
             SDL_GetMouseState(&mouseX, &mouseY);
         }
@@ -264,7 +264,7 @@ int main(int argc, char **argv)
     glDeleteBuffers(1, &vbo);
     glDeleteProgram(shaderProgram);
 
-    SDL_GL_DeleteContext(context);
+    SDL_GL_DestroyContext(context);
     SDL_DestroyWindow(window);
     SDL_Quit();
     return 0;

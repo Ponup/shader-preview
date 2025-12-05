@@ -29,7 +29,7 @@ PROGRAM = shader-preview
 
 .PHONY: all
 all:
-	gcc main.c -lSDL2 -lGLEW -lGL -lm $(CFLAGS) -o $(PROGRAM)
+	gcc main.c -lSDL3 -lGLEW -lGL -lm $(CFLAGS) -o $(PROGRAM)
 
 .PHONY: test
 test:
