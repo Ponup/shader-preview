@@ -9,7 +9,7 @@
 GLuint shaderProgram;
 GLint timeLocation, mouseXLocation, mouseYLocation;
 GLint resolutionXLocation, resolutionYLocation;
-const char *vertexShaderSource = "#version 410 core\n"
+const char *vertexShaderSource = "#version 460 core\n"
                                  "layout(location = 0) in vec2 pos;\n"
                                  "void main() {\n"
                                  "    gl_Position = vec4(pos, 0.0, 1.0);\n"
@@ -136,7 +136,7 @@ int main(int argc, char **argv)
     }
 
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4);
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 1);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 6);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
 
     SDL_Window *window = SDL_CreateWindow("Shader preview", 800, 600, SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
